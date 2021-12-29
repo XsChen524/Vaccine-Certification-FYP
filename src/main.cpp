@@ -10,7 +10,7 @@ template<typename FieldT>
 void test_two_to_one()
 {
     protoboard<FieldT> pb;
-    //Testing
+    
     digest_variable<FieldT> left(pb, SHA256_digest_size, "left");
     digest_variable<FieldT> right(pb, SHA256_digest_size, "right");
     digest_variable<FieldT> output(pb, SHA256_digest_size, "output");
