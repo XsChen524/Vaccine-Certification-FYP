@@ -1,19 +1,20 @@
 include_directories(.)
 
 add_executable(
-  main
+  sec_num_main
 
-  main.cpp
+  sec_num_main.cpp
 )
 target_link_libraries(
-  main
+  sec_num_main
 
   snark
 )
 target_include_directories(
-  main
+  sec_num_main
 
   PUBLIC
   ${DEPENDS_DIR}/libsnark
   ${DEPENDS_DIR}/libsnark/depends/libfqfft
+  ${DEPENDS_DIR}/libsnark/depends/libff
 )
