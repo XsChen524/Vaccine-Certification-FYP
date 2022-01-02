@@ -1,5 +1,5 @@
-#ifndef PASSWORD_CIRCUIT_HPP_
-#define PASSWORD_CIRCUIT_HPP_
+#ifndef SEC_NUM_CIRCUIT_HPP
+#define SEC_NUM_CIRCUIT_HPP
 #include <iostream>
 #include <string>
 #include <libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark.hpp>
@@ -61,7 +61,7 @@ r1cs_gg_ppzksnark_proof<ppT> Sec_Num_Circuit<ppT>::generate_proof(libff::bit_vec
 }
 
 template<typename ppT> 
-bool Password_Circuit<ppT>::verify_proof(r1cs_gg_ppzksnark_proof<ppT>& proof, libff::bit_vector& hashOutVector) {
+bool Sec_Num_Circuit<ppT>::verify_proof(r1cs_gg_ppzksnark_proof<ppT>& proof, libff::bit_vector& hashOutVector) {
   pb.clear_values();
   r1cs_gg_ppzksnark_keypair<ppT> keypair = get_keypair();
   r1cs_gg_ppzksnark_processed_verification_key<ppT> pvk = r1cs_gg_ppzksnark_verifier_process_vk<ppT>(keypair.vk);
