@@ -1,10 +1,5 @@
-#define CURVE_ALT_BN128
-
 #include <stdlib.h>
 #include <iostream>
-#include <libff/common/default_types/ec_pp.hpp>
-#include <libff/common/profiling.hpp>
-#include <libff/common/utils.hpp>
 #include <libsnark/gadgetlib1/gadgets/hashes/sha256/sha256_gadget.hpp>
 #include <libsnark/common/default_types/r1cs_gg_ppzksnark_pp.hpp>
 #include <boost/optional.hpp>
@@ -37,11 +32,7 @@ int main(void)
     //Initialize bit vectors
     id_bv = hash256<HashT>(id);
     secNum_bv = hash256<HashT>(secretNum);
-
-    //calculate the 2-to-1 hash
-    libff::bit_vector tmp = id_bv;
-    tmp.insert(tmp.end(), secNum_bv.begin(), secNum_bv.end());
-    hash_bv = HashT::get_hash(tmp);
+    hash_bv = hash_two_to_one<HashT>(id_bv, secNum_bv);
 
         //testing output, comment if no need
         boost::optional<std::string> test_id_Hex = binToHex<HashT>(id_bv);

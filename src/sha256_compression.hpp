@@ -133,4 +133,11 @@ libff::bit_vector hash256(std::string str) {
     return res;
 }
 
+template<typename HashT>
+libff::bit_vector hash_two_to_one(libff::bit_vector bv1, libff::bit_vector bv2){
+    libff::bit_vector tmp = bv1;
+    tmp.insert(tmp.end(), bv2.begin(), bv2.end());
+    return HashT::get_hash(tmp);
+}
+
 #endif
