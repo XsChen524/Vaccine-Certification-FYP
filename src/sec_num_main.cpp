@@ -59,6 +59,7 @@ int main(void)
     r1cs_gg_ppzksnark_proof<ppzksnark_ppT> proof = sec_num_circuit.generate_proof(id_bv, secNum_bv, hash_bv);
     printf("\n"); libff::print_indent(); libff::print_mem("after prover");
 
+    //Verifier
     libff::print_header("R1CS GG-ppzkSNARK Verifier");
     const bool ans = sec_num_circuit.verify_proof(proof, hash_bv);
     printf("\n"); libff::print_indent(); libff::print_mem("after verifier");
