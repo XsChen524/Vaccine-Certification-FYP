@@ -15,26 +15,41 @@
 using namespace libsnark;
 using namespace std;
 
+//Sample inputs
+string sampleId = "M123456(7)";
+string sampleSecretNum = "12345";
+
+//Bit vectors of SHA-256 Digest
+libff::bit_vector id_bv;
+libff::bit_vector secNum_bv;
+libff::bit_vector hash_bv;
+
 int main(void)
-{
+{   
+    //Generator
     libff::default_ec_pp::init_public_params();        
     typedef libff::default_ec_pp ppzksnark_ppT;
     typedef libff::Fr<ppzksnark_ppT> FieldT;
     typedef sha256_two_to_one_hash_gadget<FieldT> HashT;
 
-    libff::bit_vector testHash;
-    string testInput;
-    cout << "Please input text: " << endl;
-    cin >> testInput;
-    testHash = hash256<HashT>(testInput);
-    boost::optional<std::string> testOutput = binToHex<HashT>(testHash);
+    //Initialize bit vectors
+    id_bv = hash256<HashT>(sampleId);
+    secNum_bv = hash256<HashT>(sampleSecretNum);
 
-    cout << testHash.size() << "\n";
-    for (size_t i = 0; i < testHash.size(); ++i) {
-        cout << testHash[i];
-    }
-    cout << endl;
-    cout << testOutput << endl;
+    //calculate the 2-to-1 hash
+    libff::bit_vector tmp = id_bv;
+    tmp.insert(tmp.end(), secNum_bv.begin(), secNum_bv.end());
+    hash_bv = HashT::get_hash(tmp);
+
+        //testing output, comment if no need
+        boost::optional<std::string> test_id_Hex = binToHex<HashT>(id_bv);
+        boost::optional<std::string> test_secNum_Hex = binToHex<HashT>(secNum_bv);
+        boost::optional<std::string> test_hash_Hex = binToHex<HashT>(hash_bv);
+        cout << "id_bv_hex:" << test_id_Hex << endl;
+        cout << "secNum_bc_hex:" << test_secNum_Hex << endl;
+        cout << "hash_bv_hex:" << test_hash_Hex << endl;
+
+    
 
     return 0;
 }
