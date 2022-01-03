@@ -108,6 +108,11 @@ vector<std::string> split(std::string& str, std::string delim) {
     return res;
 }
 
+/*
+* @brief Calculate the SHA256 Hash Digest of the given string argument
+* @param[in] str A string to be SHA256 Hashed
+* @return bit_vector of the SHA256 Digest
+*/
 template<typename HashT>
 libff::bit_vector hash256(std::string str) {
     libff::bit_vector operand;
