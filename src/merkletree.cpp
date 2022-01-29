@@ -5,7 +5,19 @@
 #include <iostream>
 #include <fstream>
 #include <boost/optional.hpp>
-#include "merklecircuit.h"
+#include "../circuit/merklecircuit.h"
+#include <stdlib.h>
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
+#include <string>
+#include <time.h>
+#include <chrono>
+#include <iomanip>
+#include <libsnark/gadgetlib1/gadgets/hashes/sha256/sha256_gadget.hpp>
+#include <libsnark/common/default_types/r1cs_gg_ppzksnark_pp.hpp>
+#include <boost/optional.hpp>
+#include <boost/optional/optional_io.hpp>
 
 using namespace libsnark;
 
@@ -26,7 +38,8 @@ r1cs_gg_ppzksnark_keypair<ppzksnark_ppT> generate_read_keypair(const size_t tree
 
 template<typename ppzksnark_ppT, typename FieldT, typename HashT>
 boost::optional<r1cs_gg_ppzksnark_proof<ppzksnark_ppT>> generate_read_proof(r1cs_gg_ppzksnark_proving_key<ppzksnark_ppT> proving_key,
-                                                                    const size_t tree_depth, libff::bit_vector& leaf,
+                                                                    const size_t tree_depth,
+                                                                    libff::bit_vector& sk, libff::bit_vector& rk, libff::bit_vector& leaf,
                                                                     libff::bit_vector& root, merkle_authentication_path& path,
                                                                     const size_t address, libff::bit_vector& address_bits)
 {
@@ -34,7 +47,7 @@ boost::optional<r1cs_gg_ppzksnark_proof<ppzksnark_ppT>> generate_read_proof(r1cs
 
     sample::MerkleCircuit<FieldT, HashT> mc(pb, tree_depth);
     mc.generate_r1cs_constraints();
-    mc.generate_r1cs_witness(pb, leaf, root, path, address, address_bits);
+    mc.generate_r1cs_witness(pb, sk, rk, leaf, root, path, address, address_bits);
     if (!pb.is_satisfied()) {
         std::cout << "pb is not satisfied" << std::endl;
         return boost::none;
@@ -45,11 +58,14 @@ boost::optional<r1cs_gg_ppzksnark_proof<ppzksnark_ppT>> generate_read_proof(r1cs
 
 template<typename ppzksnark_ppT, typename FieldT>
 bool verify_read_proof(r1cs_gg_ppzksnark_verification_key<ppzksnark_ppT> verification_key,
-                  r1cs_gg_ppzksnark_proof<ppzksnark_ppT> proof, libff::bit_vector& root)
+                  r1cs_gg_ppzksnark_proof<ppzksnark_ppT> proof, libff::bit_vector& root, libff::bit_vector& rk)
 {
     r1cs_primary_input<FieldT> input;
-    for (auto item : root) {
-        input.push_back(FieldT(item));
+    for (auto i : root) {
+        input.push_back(FieldT(i));
+    }
+    for (auto j : rk) {
+        input.push_back(FieldT(j));
     }
     return r1cs_gg_ppzksnark_verifier_strong_IC<ppzksnark_ppT>(verification_key, input, proof);
 }
@@ -175,6 +191,26 @@ libff::bit_vector hash256(std::string str) {
     return res;
 }
 
+template<typename HashT>
+libff::bit_vector hash_two_to_one(libff::bit_vector bv1, libff::bit_vector bv2){
+    libff::bit_vector tmp = bv1;
+    tmp.insert(tmp.end(), bv2.begin(), bv2.end());
+    return HashT::get_hash(tmp);
+}
+
+
+int GenerateRandomInt(){
+    srand((unsigned)time(NULL)); 
+    return rand();
+}
+
+std::string GetTimeStamp(){
+    time_t t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&t),"%F %X");
+    return ss.str();
+}
+
 
 //  ./merkle prove [data1] [data2] [data3] [data4] [data5] [data6] [data7] [data8] [index of the leaf]
 
@@ -224,16 +260,34 @@ int main(int argc, char* argv[]){
         //define the number of leaf, 8 in our case
         int leaf_count = std::pow(2, tree_depth);
 
+        // testing inputs
+        //string secretNum;
+        //string timestamp;
+        //Bit vectors of SHA-256 Digest
+        libff::bit_vector secNum_bv;
+        libff::bit_vector rk_bv;
+        libff::bit_vector hash_bv;
+
+        std::string secret = "1000";
+        std::string random_key = "100";
+        secNum_bv = hash256<HashT>(secret);
+        rk_bv = hash256<HashT>(random_key);
+        hash_bv = hash_two_to_one<HashT>(secNum_bv, rk_bv);
+        //secretNum = to_string(GenerateRandomInt());
+        //timestamp = GetTimeStamp();
+
         std::string name[] = { "Jack", "Eric","Allen", "Tom",
-                            "Alice","Bob","Cecilia", "Dan" };
+                            "Alice","Bob","Cecilia", "Dan" };//Dan won't be used
 
         // store all the leaf in levels[2], rmb levels is 2Darray
-        for (int i = 0; i < leaf_count; i++) {
+        for (int i = 0; i < leaf_count-1; i++) {
             libff::bit_vector tmp = hash256<HashT>(name[i]);
             std::cout <<*binToHex<HashT>(tmp) << std::endl;
             //std::cout <<"hash"+ i + " : " + *binToHex<HashT>(tmp) << std::endl;
             levels[tree_depth - 1].push_back(tmp);  
         }
+        //our target leaf digest add to merkle tree 
+        levels[tree_depth - 1].push_back(hash_bv);
 
         //construct the whole Merkle Tree    **rmb levels[2]= [hash1,hash2,hash3,....]
         /*
@@ -257,7 +311,7 @@ int main(int argc, char* argv[]){
         input.insert(input.end(), levels[0][1].begin(), levels[0][1].end());
         root = HashT::get_hash(input);
 
-        // define the target hash digest
+        // define the target hash digest , rmb our leaf is added at very last so it is in position 7
         //address = std::stoi(argv[10]);
         address = 7;
         leaf = levels[tree_depth-1][address];   //eg. levels[2][0] the first leaf
@@ -297,7 +351,7 @@ int main(int argc, char* argv[]){
         std::cout << "root is " << *binToHex<HashT>(root) << std::endl;
 
         //Generate Proof
-        auto proof = generate_read_proof<ppzksnark_ppT, FieldT, HashT>(pk, tree_depth, leaf, root, path, address, address_bits);
+        auto proof = generate_read_proof<ppzksnark_ppT, FieldT, HashT>(pk, tree_depth,secNum_bv,rk_bv, leaf, root, path, address, address_bits);
         if (proof != boost::none) {
             std::cout << "Proof generated!" << std::endl;
         }
@@ -346,8 +400,10 @@ int main(int argc, char* argv[]){
         std::string r(Merkleroot);
         libff::bit_vector root = hexToBin(r);
 	    
+        std::string random_key = "100";
+        libff::bit_vector rk_bv = hash256<HashT>(random_key);
         //verify the proof, root is public knowledge, signed by server
-        bool ret = verify_read_proof<ppzksnark_ppT, FieldT>(vk, proof, root);
+        bool ret = verify_read_proof<ppzksnark_ppT, FieldT>(vk, proof, root, rk_bv);
         if (ret) {
             std::cout << "Verification pass!" << std::endl;
         } else {

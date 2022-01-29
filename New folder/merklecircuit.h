@@ -9,13 +9,6 @@
 #include <libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark.hpp>
 #include <libsnark/gadgetlib1/gadgets/merkle_tree/merkle_tree_check_read_gadget.hpp>
 #include <libsnark/gadgetlib1/gadgets/hashes/sha256/sha256_gadget.hpp>
-#include <iostream>
-#include <string>
-#include <libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark.hpp>
-#include <libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark.tcc>
-#include <libsnark/gadgetlib1/gadget.hpp>
-#include <libsnark/gadgetlib1/gadgets/hashes/hash_io.hpp>
-#include <libsnark/gadgetlib1/protoboard.hpp>
 
 using namespace libsnark;
 namespace sample {
@@ -26,52 +19,33 @@ namespace sample {
         const size_t digest_size;
         const size_t tree_depth;
         std::shared_ptr<digest_variable<FieldT>> root_digest;
-        std::shared_ptr<digest_variable<FieldT>> random_key;    // hash the random key
-        std::shared_ptr<digest_variable<FieldT>> secret;        // hash all the secret
-        std::shared_ptr<digest_variable<FieldT>> leaf_digest;    // store leaf root = hash(rk,secret)
+        std::shared_ptr<digest_variable<FieldT>> leaf_digest;
         pb_variable_array<FieldT> address_bits_var;
         std::shared_ptr<merkle_authentication_path_variable<FieldT, HashT>> path_var;
         std::shared_ptr<merkle_tree_check_read_gadget<FieldT, HashT>> merkle;
-        std::shared_ptr<sha256_two_to_one_hash_gadget<FieldT>> hash_func;
-        //sha256_two_to_one_hash_gadget<libff::Fr<ppT>> hash_func;
 
         MerkleCircuit(protoboard<FieldT>& pb, const size_t& depth):
             digest_size(HashT::get_digest_len()),
             tree_depth(depth)
         {
-            {  //set input size   disclose hash of random key and root digest
-                pb.set_input_sizes(root_digest->digest_size *2);
-                //const size_t input_size_in_field_element = div_ceil(2 * sha256_digest_len, FieldT::capacity());
-                //this->pb.set_input_sizes(input_size_in_field_element);
-            }
-            random_key = std::make_shared<digest_variable<FieldT>>(pb, digest_size, "rk");
-            secret = std::make_shared<digest_variable<FieldT>>(pb, digest_size, "sk");
-            leaf_digest = std::make_shared<digest_variable<FieldT>>(pb, digest_size, "leaf");
-            hash_func = std::make_shared<sha256_two_to_one_hash_gadget<FieldT>>(pb, *secret, *random_key, *leaf_digest, "hashF");
             root_digest = std::make_shared<digest_variable<FieldT>>(pb, digest_size, "root");
+            leaf_digest= std::make_shared<digest_variable<FieldT>>(pb, digest_size, "leaf");
             path_var = std::make_shared<merkle_authentication_path_variable<FieldT, HashT>>(pb, tree_depth, "path");
             address_bits_var.allocate(pb, tree_depth, "address_bits");
             merkle = std::make_shared<merkle_tree_check_read_gadget<FieldT, HashT>>(pb, tree_depth, address_bits_var, *leaf_digest, *root_digest, *path_var, ONE, "merkle");
-            //pb.set_input_sizes(root_digest->digest_size);
-            
+            pb.set_input_sizes(root_digest->digest_size);
         }
 
         void generate_r1cs_constraints() {
-            hash_func->generate_r1cs_constraints();
             path_var->generate_r1cs_constraints();
             merkle->generate_r1cs_constraints();
         }
 
-        void generate_r1cs_witness(protoboard<FieldT>& pb, 
-                                   libff::bit_vector& sk,libff::bit_vector& rk,libff::bit_vector& leaf,
+        void generate_r1cs_witness(protoboard<FieldT>& pb, libff::bit_vector& leaf,
                                    libff::bit_vector& root, merkle_authentication_path& path,
                                    const size_t address, libff::bit_vector& address_bits) {
-            leaf_digest->generate_r1cs_witness(leaf);
-            secret->generate_r1cs_witness(sk);
-            random_key->generate_r1cs_witness(rk);
-            hash_func->generate_r1cs_witness();   // generate the witness for hash func
-            leaf_digest->generate_r1cs_witness(leaf);
             root_digest->generate_r1cs_witness(root);
+            leaf_digest->generate_r1cs_witness(leaf);
             address_bits_var.fill_with_bits(pb, address_bits);
             assert(address_bits_var.get_field_element_from_bits(pb).as_ulong() == address);
             path_var->generate_r1cs_witness(address, path);
