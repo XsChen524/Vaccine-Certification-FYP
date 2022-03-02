@@ -33,11 +33,14 @@ bool sha256_padding[256] = {1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0
                             0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
                             0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 0,0,0,0,0,0,0,0};
 
-template<typename FieldT>
-class l_gadget : public gadget<FieldT> {
+/// 模板类构造函数初始化列表?
+template<typename FieldT> class l_gadget : public gadget<FieldT> {
 public:
+                                        //有限域
     pb_variable_array<FieldT> input_as_field_elements; /* R1CS input */
     pb_variable_array<FieldT> input_as_bits; /* unpacked R1CS input */
+
+    /// C++11 智能指针, 查一下multipacking的定义?
     std::shared_ptr<multipacking_gadget<FieldT> > unpack_inputs; /* multipacking gadget */
 
     std::shared_ptr<digest_variable<FieldT>> h1_var; /* H(R1) */
@@ -47,6 +50,7 @@ public:
     std::shared_ptr<digest_variable<FieldT>> r1_var; /* R1 */
     std::shared_ptr<digest_variable<FieldT>> r2_var; /* R2 */
 
+    /// block variable的定义?
     std::shared_ptr<block_variable<FieldT>> h_r1_block; /* 512 bit block that contains r1 + padding */
     std::shared_ptr<sha256_compression_function_gadget<FieldT>> h_r1; /* hashing gadget for r1 */
 
@@ -57,8 +61,7 @@ public:
     pb_variable_array<FieldT> padding_var; /* SHA256 length padding */
 
 
-    l_gadget(protoboard<FieldT> &pb) : gadget<FieldT>(pb, "l_gadget")
-    {
+    l_gadget(protoboard<FieldT> &pb) : gadget<FieldT>(pb, "l_gadget"){
         // Allocate space for the verifier input.
         const size_t input_size_in_bits = sha256_digest_len * 3;
         {
@@ -125,8 +128,8 @@ public:
                                                                   *h2_var,
                                                                   "h_r2"));
     }
-    void generate_r1cs_constraints()
-    {
+
+    void generate_r1cs_constraints(){
         // Multipacking constraints (for input validation)
         unpack_inputs->generate_r1cs_constraints(true);
 
@@ -152,13 +155,9 @@ public:
         h_r1->generate_r1cs_constraints();
         h_r2->generate_r1cs_constraints();
     }
-    void generate_r1cs_witness(const bit_vector &h1,
-                               const bit_vector &h2,
-                               const bit_vector &x,
-                               const bit_vector &r1,
-                               const bit_vector &r2
-                              )
-    {
+
+    /// \brief Generate_r1cs_witness function 
+    void generate_r1cs_witness(const bit_vector &h1, const bit_vector &h2, const bit_vector &x, const bit_vector &r1, const bit_vector &r2){
         // Fill our digests with our witnessed data
         x_var->bits.fill_with_bits(this->pb, x);
         r1_var->bits.fill_with_bits(this->pb, r1);
@@ -178,11 +177,7 @@ public:
 };
 
 template<typename FieldT>
-r1cs_primary_input<FieldT> l_input_map(const bit_vector &h1,
-                                             const bit_vector &h2,
-                                             const bit_vector &x
-                                            )
-{
+r1cs_primary_input<FieldT> l_input_map(const bit_vector &h1, const bit_vector &h2, const bit_vector &x){
     // Construct the multipacked field points which encode
     // the verifier's knowledge. This is the "dual" of the
     // multipacking gadget logic in the constructor.
