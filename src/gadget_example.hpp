@@ -33,7 +33,8 @@ bool sha256_padding[256] = {1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0
                             0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
                             0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 0,0,0,0,0,0,0,0};
 
-/// 模板类构造函数初始化列表?
+/// 类模板的继承 初始化列表?
+/// 子模板类继承父类 gadget<FieldT>
 template<typename FieldT> class l_gadget : public gadget<FieldT> {
 public:
                                         //有限域
@@ -60,7 +61,7 @@ public:
     pb_variable<FieldT> zero;
     pb_variable_array<FieldT> padding_var; /* SHA256 length padding */
 
-
+    /// 子模板类构造函数, 继承父类gadget (pb, annotation_prefix)
     l_gadget(protoboard<FieldT> &pb) : gadget<FieldT>(pb, "l_gadget"){
         // Allocate space for the verifier input.
         const size_t input_size_in_bits = sha256_digest_len * 3;
@@ -95,6 +96,7 @@ public:
         assert(input_as_bits.size() == input_size_in_bits);
         unpack_inputs.reset(new multipacking_gadget<FieldT>(this->pb, input_as_bits, input_as_field_elements, FieldT::capacity(), FMT(this->annotation_prefix, " unpack_inputs")));
 
+        /// C++11智能指针
         // Prover inputs:
         r1_var.reset(new digest_variable<FieldT>(pb, sha256_digest_len, "r1"));
         r2_var.reset(new digest_variable<FieldT>(pb, sha256_digest_len, "r2"));
